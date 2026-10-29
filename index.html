@@ -1,0 +1,233 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DermAI | Skin Image Screening</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1e293b;
+    }
+    header {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 18px 7%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { font-size: 25px; font-weight: 700; color: #2563eb; }
+    header span { color: #64748b; font-size: 13px; }
+    main { max-width: 760px; margin: 42px auto; padding: 0 18px; }
+    .intro { text-align: center; margin-bottom: 28px; }
+    h1 { margin-bottom: 10px; font-size: 32px; }
+    .intro p { color: #64748b; line-height: 1.6; }
+    .card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 26px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 20px #0f172a08;
+    }
+    .upload {
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      background: #f8fafc;
+    }
+    .upload p { color: #64748b; font-size: 14px; }
+    input[type=file] { max-width: 100%; margin-top: 10px; }
+    #preview {
+      display: none;
+      max-width: 100%;
+      max-height: 320px;
+      margin: 20px auto 0;
+      border-radius: 10px;
+      object-fit: contain;
+    }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 18px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .55; cursor: wait; }
+    #status { margin-top: 14px; text-align: center; color: #475569; }
+    #results { display: none; }
+    .prediction {
+      padding: 16px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .prediction:last-child { border-bottom: 0; }
+    .pred-top { display: flex; justify-content: space-between; gap: 12px; }
+    .pred-name { font-weight: 600; }
+    .confidence { color: #2563eb; font-weight: 700; white-space: nowrap; }
+    .track { height: 8px; margin-top: 10px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
+    .bar { height: 100%; background: #2563eb; border-radius: 10px; }
+    .disclaimer {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 12px;
+      padding: 16px;
+      color: #9a3412;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    footer { text-align: center; color: #94a3b8; font-size: 12px; padding: 12px 18px 30px; }
+    @media (max-width: 500px) {
+      h1 { font-size: 26px; }
+      .card { padding: 18px; }
+      header { padding: 16px 5%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">DermAI</div>
+    <span>AI Screening Research</span>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h1>Skin Image Analysis</h1>
+      <p>Upload a skin image to view the AI model's top predictions.</p>
+    </section>
+
+    <section class="card">
+      <h2>Upload image</h2>
+      <div class="upload">
+        <strong>Select a skin image</strong>
+        <p>Supported formats: JPG and PNG</p>
+        <input id="imageInput" type="file" accept="image/jpeg,image/png">
+        <img id="preview" alt="Selected skin image preview">
+      </div>
+      <button id="analyzeBtn" disabled>Analyze Image</button>
+      <div id="status" role="status"></div>
+    </section>
+
+    <section id="results" class="card">
+      <h2>Prediction Results</h2>
+      <div id="predictionList"></div>
+    </section>
+
+    <div class="disclaimer">
+      <strong>Medical disclaimer:</strong>
+      This AI tool is for research and screening support only, not a medical
+      diagnosis. Confidence scores are not probabilities of having a disease.
+      A low-risk prediction does not rule out skin cancer. Consult a qualified
+      dermatologist for medical assessment.
+    </div>
+  </main>
+
+  <footer>DermAI · Educational research prototype</footer>
+
+  <script>
+    const API_URL = "http://127.0.0.1:8000";
+    const input = document.getElementById("imageInput");
+    const preview = document.getElementById("preview");
+    const button = document.getElementById("analyzeBtn");
+    const status = document.getElementById("status");
+    const results = document.getElementById("results");
+    const list = document.getElementById("predictionList");
+
+    input.addEventListener("change", () => {
+      const file = input.files[0];
+      results.style.display = "none";
+      status.textContent = "";
+
+      if (!file) {
+        preview.style.display = "none";
+        button.disabled = true;
+        return;
+      }
+
+      if (!["image/jpeg", "image/png"].includes(file.type)) {
+        status.textContent = "Please choose a JPG or PNG image.";
+        input.value = "";
+        preview.style.display = "none";
+        button.disabled = true;
+        return;
+      }
+
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = "block";
+      button.disabled = false;
+    });
+
+    button.addEventListener("click", async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      button.disabled = true;
+      status.textContent = "Analyzing image... Please wait.";
+      results.style.display = "none";
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(`${API_URL}/predict`, {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "Prediction request failed.");
+        }
+
+        list.replaceChildren();
+
+        data.predictions.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "prediction";
+
+          const top = document.createElement("div");
+          top.className = "pred-top";
+
+          const name = document.createElement("span");
+          name.className = "pred-name";
+          name.textContent = item.name;
+
+          const confidence = document.createElement("span");
+          confidence.className = "confidence";
+          confidence.textContent = `${item.confidence}%`;
+
+          const track = document.createElement("div");
+          track.className = "track";
+
+          const bar = document.createElement("div");
+          bar.className = "bar";
+          bar.style.width = `${Math.max(0, Math.min(100, item.confidence))}%`;
+
+          top.append(name, confidence);
+          track.append(bar);
+          row.append(top, track);
+          list.append(row);
+        });
+
+        results.style.display = "block";
+        status.textContent = "Analysis complete.";
+      } catch (error) {
+        status.textContent =
+          `Could not analyze the image: ${error.message}. Make sure the API server is running.`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
