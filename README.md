@@ -88,3 +88,20 @@ DermAI is an educational research prototype, not a medical diagnostic device. Pr
 ## Responsible Use
 
 Use appropriate, authorized images and protect personal and medical information. Model performance can vary across image quality, lesion types, and populations.
+
+## Model Evaluation
+
+### Confusion Matrix
+![Confusion Matrix](results/confusion_matrix_test.png)
+
+### Training Curves
+![Training Curves](results/training_curves.png)
+
+### Grad-CAM Explainability
+![Grad-CAM Examples](results/gradcam_examples.png)
+
+## Evaluation Metrics
+See [model metrics](results/dermai_metrics.json).
+
+## Training Notebook
+[Open the DermAI ConvNeXt-Tiny Notebook](DermAI_ConvNeXt_Tiny.ipynb)
