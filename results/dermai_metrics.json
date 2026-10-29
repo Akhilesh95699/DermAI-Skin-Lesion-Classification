@@ -1,0 +1,17 @@
+{
+  "dataset": "HAM10000 Split and Augmented (test_dir)",
+  "test_images": 828,
+  "model": "ConvNeXt-Tiny, 384px, flip TTA",
+  "accuracy_%": 92.03,
+  "balanced_accuracy_%": 73.92,
+  "macro_f1": 0.7681,
+  "per_class_recall_%": {
+    "akiec": 63.6,
+    "bcc": 70.4,
+    "bkl": 66.7,
+    "df": 66.7,
+    "mel": 51.4,
+    "nv": 98.6,
+    "vasc": 100.0
+  }
+}
